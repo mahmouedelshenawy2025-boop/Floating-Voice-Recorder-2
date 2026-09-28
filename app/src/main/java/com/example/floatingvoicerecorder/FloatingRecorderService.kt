@@ -6,19 +6,19 @@ import android.app.NotificationManager
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.graphics.Color
 import android.graphics.PixelFormat
 import android.media.MediaRecorder
 import android.os.Build
 import android.os.IBinder
 import android.view.Gravity
-import android.view.LayoutInflater
 import android.view.View
 import android.view.WindowManager
 import android.widget.Button
+import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import java.io.File
-import java.io.IOException
 
 class FloatingRecorderService : Service() {
 
@@ -39,13 +39,13 @@ class FloatingRecorderService : Service() {
     override fun onCreate() {
         super.onCreate()
         isRunning = true
-        startForegroundServiceWithNotification()
-        setupFloatingWindow()
+        startForegroundNotification()
+        createFloatingWidget()
     }
 
-    private fun startForegroundServiceWithNotification() {
-        val channelId = "floating_recorder_channel"
-        val channelName = "Voice Recorder Service"
+    private fun startForegroundNotification() {
+        val channelId = "floating_recorder_channel_v2"
+        val channelName = "Floating Voice Recorder"
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
@@ -58,16 +58,17 @@ class FloatingRecorderService : Service() {
         }
 
         val notification: Notification = NotificationCompat.Builder(this, channelId)
-            .setContentTitle("Floating Voice Recorder")
-            .setContentText("Service is running...")
+            .setContentTitle("Floating Recorder Active")
+            .setContentText("Overlay controls are visible on screen")
             .setSmallIcon(android.R.drawable.ic_btn_speak_now)
             .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setOngoing(true)
             .build()
 
-        startForeground(1, notification)
+        startForeground(101, notification)
     }
 
-    private fun setupFloatingWindow() {
+    private fun createFloatingWidget() {
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
 
         val layoutType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -81,71 +82,84 @@ class FloatingRecorderService : Service() {
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
             layoutType,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.START
             x = 100
-            y = 200
+            y = 300
+        }
+
+        // إنشاء الواجهة برمجياً بشكل مباشر لتجنب أي مشكلة في ملفات ה-XML
+        val container = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            setPadding(20, 20, 20, 20)
+            setBackgroundColor(Color.parseColor("#CC000000"))
+        }
+
+        val btnRecord = Button(this).apply {
+            text = "🔴 Record"
+            setTextColor(Color.WHITE)
+        }
+
+        val btnStop = Button(this).apply {
+            text = "❌ Close"
+            setTextColor(Color.WHITE)
+        }
+
+        container.addView(btnRecord)
+        container.addView(btnStop)
+        floatingView = container
+
+        btnRecord.setOnClickListener {
+            if (!isRecording) {
+                if (startAudioRecording()) {
+                    btnRecord.text = "⏹ Stop"
+                }
+            } else {
+                stopAudioRecording()
+                btnRecord.text = "🔴 Record"
+            }
+        }
+
+        btnStop.setOnClickListener {
+            stopAudioRecording()
+            stopSelf()
         }
 
         try {
-            val inflater = getSystemService(LAYOUT_INFLATER_SERVICE) as LayoutInflater
-            val resId = resources.getIdentifier("layout_floating_control", "layout", packageName)
-            if (resId != 0) {
-                floatingView = inflater.inflate(resId, null)
-            } else {
-                val altResId = resources.getIdentifier("activity_main", "layout", packageName)
-                floatingView = inflater.inflate(if (altResId != 0) altResId else R.layout.activity_main, null)
-            }
-
-            val btnRecord = floatingView?.findViewById<Button>(R.id.btn_record)
-            val btnFinish = floatingView?.findViewById<Button>(R.id.btn_finish)
-
-            btnRecord?.setOnClickListener {
-                if (!isRecording) {
-                    startAudioRecording()
-                    btnRecord.text = "Stop"
-                } else {
-                    stopAudioRecording()
-                    btnRecord.text = "Record"
-                }
-            }
-
-            btnFinish?.setOnClickListener {
-                stopAudioRecording()
-                stopSelf()
-            }
-
             windowManager?.addView(floatingView, params)
         } catch (e: Exception) {
             e.printStackTrace()
+            Toast.makeText(this, "Error showing overlay: ${e.message}", Toast.LENGTH_LONG).show()
         }
     }
 
-    private fun startAudioRecording() {
-        val file = File(getExternalFilesDir(null), "recording_${System.currentTimeMillis()}.3gp")
-        outputFile = file.absolutePath
+    private fun startAudioRecording(): Boolean {
+        return try {
+            val file = File(getExternalFilesDir(null), "rec_${System.currentTimeMillis()}.3gp")
+            outputFile = file.absolutePath
 
-        mediaRecorder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            MediaRecorder(this)
-        } else {
-            @Suppress("DEPRECATION")
-            MediaRecorder()
-        }.apply {
-            setAudioSource(MediaRecorder.AudioSource.MIC)
-            setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP)
-            setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB)
-            setOutputFile(outputFile)
-            try {
+            mediaRecorder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                MediaRecorder(this)
+            } else {
+                @Suppress("DEPRECATION")
+                MediaRecorder()
+            }.apply {
+                setAudioSource(MediaRecorder.AudioSource.MIC)
+                setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP)
+                setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB)
+                setOutputFile(outputFile)
                 prepare()
                 start()
-                isRecording = true
-                Toast.makeText(applicationContext, "Recording started", Toast.LENGTH_SHORT).show()
-            } catch (e: IOException) {
-                e.printStackTrace()
-                Toast.makeText(applicationContext, "Record failed: ${e.message}", Toast.LENGTH_SHORT).show()
             }
+            isRecording = true
+            Toast.makeText(this, "Recording started!", Toast.LENGTH_SHORT).show()
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Toast.makeText(this, "Record error: ${e.message}", Toast.LENGTH_LONG).show()
+            false
         }
     }
 
@@ -156,13 +170,13 @@ class FloatingRecorderService : Service() {
                 mediaRecorder?.release()
                 mediaRecorder = null
                 isRecording = false
-                
+
                 val intent = Intent(ACTION_RECORDING_SAVED).apply {
                     putExtra(EXTRA_FILE_PATH, outputFile)
                 }
                 sendBroadcast(intent)
-                
-                Toast.makeText(applicationContext, "Saved: $outputFile", Toast.LENGTH_SHORT).show()
+
+                Toast.makeText(this, "Saved: $outputFile", Toast.LENGTH_LONG).show()
             } catch (e: Exception) {
                 e.printStackTrace()
             }
