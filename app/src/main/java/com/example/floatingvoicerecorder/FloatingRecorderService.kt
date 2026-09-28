@@ -20,7 +20,7 @@ import androidx.core.app.NotificationCompat
 import java.io.File
 import java.io.IOException
 
-class FloatingService : Service() {
+class FloatingRecorderService : Service() {
 
     private var windowManager: WindowManager? = null
     private var floatingView: View? = null
@@ -52,7 +52,7 @@ class FloatingService : Service() {
 
         val notification: Notification = NotificationCompat.Builder(this, channelId)
             .setContentTitle("Floating Voice Recorder")
-            .setContentText("Service is running in background...")
+            .setContentText("Service is running...")
             .setSmallIcon(android.R.drawable.ic_btn_speak_now)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .build()
@@ -84,76 +84,23 @@ class FloatingService : Service() {
 
         try {
             val inflater = getSystemService(LAYOUT_INFLATER_SERVICE) as LayoutInflater
-            floatingView = inflater.inflate(R.layout.layout_floating_control, null)
-
-            val btnRecord = floatingView?.findViewById<Button>(R.id.btn_record)
-            val btnFinish = floatingView?.findViewById<Button>(R.id.btn_finish)
-
-            btnRecord?.setOnClickListener {
-                if (!isRecording) {
-                    startAudioRecording()
-                    btnRecord.text = "Recording..."
-                } else {
-                    stopAudioRecording()
-                    btnRecord.text = "Record"
-                }
-            }
-
-            btnFinish?.setOnClickListener {
-                stopAudioRecording()
-                stopSelf()
+            // استدعاء الواجهة الافتراضية للتسجيل
+            val resId = resources.getIdentifier("layout_floating_control", "layout", packageName)
+            if (resId != 0) {
+                floatingView = inflater.inflate(resId, null)
+            } else {
+                val altResId = resources.getIdentifier("activity_main", "layout", packageName)
+                floatingView = inflater.inflate(if (altResId != 0) altResId else R.layout.activity_main, null)
             }
 
             windowManager?.addView(floatingView, params)
         } catch (e: Exception) {
             e.printStackTrace()
-            Toast.makeText(this, "Failed to display overlay: ${e.message}", Toast.LENGTH_LONG).show()
-        }
-    }
-
-    private fun startAudioRecording() {
-        val file = File(getExternalFilesDir(null), "recording_${System.currentTimeMillis()}.3gp")
-        outputFile = file.absolutePath
-
-        mediaRecorder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            MediaRecorder(this)
-        } else {
-            @Suppress("DEPRECATION")
-            MediaRecorder()
-        }.apply {
-            setAudioSource(MediaRecorder.AudioSource.MIC)
-            setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP)
-            setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB)
-            setOutputFile(outputFile)
-            try {
-                prepare()
-                start()
-                isRecording = true
-                Toast.makeText(applicationContext, "Recording started", Toast.LENGTH_SHORT).show()
-            } catch (e: IOException) {
-                e.printStackTrace()
-                Toast.makeText(applicationContext, "Record failed: ${e.message}", Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
-
-    private fun stopAudioRecording() {
-        if (isRecording) {
-            try {
-                mediaRecorder?.stop()
-                mediaRecorder?.release()
-                mediaRecorder = null
-                isRecording = false
-                Toast.makeText(applicationContext, "Recording saved: $outputFile", Toast.LENGTH_LONG).show()
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
         }
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        stopAudioRecording()
         if (floatingView != null) {
             windowManager?.removeView(floatingView)
         }
