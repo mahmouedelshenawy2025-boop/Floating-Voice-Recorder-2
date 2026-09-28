@@ -1,0 +1,20 @@
+<resources>
+    <color name="primary">#6366F1</color>
+    <color name="primary_dark">#4F46E5</color>
+    <color name="accent">#EC4899</color>
+    
+    <color name="recording_red">#EF4444</color>
+    <color name="pause_amber">#F59E0B</color>
+    <color name="finish_emerald">#10B981</color>
+    
+    <color name="overlay_background">#E618181B</color>
+    <color name="overlay_border">#33FFFFFF</color>
+    
+    <color name="background_dark">#09090B</color>
+    <color name="surface_dark">#18181B</color>
+    <color name="surface_card">#27272A</color>
+    
+    <color name="text_primary">#FAFAFA</color>
+    <color name="text_secondary">#A1A1AA</color>
+    <color name="text_muted">#71717A</color>
+</resources>

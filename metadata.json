@@ -1,0 +1,6 @@
+{
+  "name": "Floating Voice Recorder",
+  "description": "Native Android Floating Voice Recorder with WindowManager overlay controls, foreground service, and audio recording.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
