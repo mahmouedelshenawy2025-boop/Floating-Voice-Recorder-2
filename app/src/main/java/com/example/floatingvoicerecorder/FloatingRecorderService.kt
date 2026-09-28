@@ -119,7 +119,7 @@ class FloatingRecorderService : Service() {
 
             windowManager?.addView(floatingView, params)
         } catch (e: Exception) {
-            e.printStackTrace Bea
+            e.printStackTrace()
         }
     }
 
