@@ -3,19 +3,19 @@
     <string name="channel_id">floating_recorder_channel</string>
     <string name="channel_name">Voice Recorder Service</string>
     <string name="channel_desc">Shows ongoing status and controls for floating audio recorder</string>
-    
+
     <!-- Floating overlay buttons -->
     <string name="btn_record">Record</string>
     <string name="btn_pause">Pause</string>
     <string name="btn_resume">Resume</string>
     <string name="btn_finish">Finish</string>
-    
+
     <!-- Status messages -->
     <string name="status_ready">Ready to record</string>
     <string name="status_recording">Recording in progress...</string>
     <string name="status_paused">Recording paused</string>
     <string name="status_saved">Recording saved successfully</string>
-    
+
     <!-- MainActivity UI strings -->
     <string name="title_permissions">Required Permissions</string>
     <string name="desc_permissions">To display the floating controls over other apps and record your voice, grant the following permissions.</string>
@@ -26,11 +26,11 @@
     <string name="perm_granted">Granted</string>
     <string name="perm_not_granted">Not Granted</string>
     <string name="btn_grant">Grant</string>
-    
+
     <string name="title_service_control">Floating Controller</string>
     <string name="btn_start_service">Start Floating Overlay</string>
     <string name="btn_stop_service">Stop Floating Overlay</string>
-    
+
     <string name="title_recordings">Saved Recordings</string>
-    <string name="no_recordings">No voice recordings yet. Tap 'Start Floating Overlay' to begin!</string>
+    <string name="no_recordings">No voice recordings yet. Tap Start Floating Overlay to begin!</string>
 </resources>
