@@ -36,6 +36,13 @@ class FloatingRecorderService : Service() {
     private var isPlaying = false
     private var audioFilePath: String = ""
 
+    // إعلان الأزرار في نطاق الكلاس حتى تراها كل الدوال
+    private lateinit var btnRecord: ImageButton
+    private lateinit var btnPause: ImageButton
+    private lateinit var btnPlay: ImageButton
+    private lateinit var btnSave: ImageButton
+    private lateinit var btnClose: ImageButton
+
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
@@ -80,14 +87,14 @@ class FloatingRecorderService : Service() {
         }
 
         // 1. زر التسجيل
-        val btnRecord = ImageButton(this).apply {
+        btnRecord = ImageButton(this).apply {
             setImageResource(android.R.drawable.ic_btn_speak_now)
             setBackgroundColor(Color.TRANSPARENT)
             setColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN)
         }
 
         // 2. زر التوقف المؤقت
-        val btnPause = ImageButton(this).apply {
+        btnPause = ImageButton(this).apply {
             setImageResource(android.R.drawable.ic_media_pause)
             setBackgroundColor(Color.TRANSPARENT)
             setColorFilter(Color.YELLOW, PorterDuff.Mode.SRC_IN)
@@ -95,7 +102,7 @@ class FloatingRecorderService : Service() {
         }
 
         // 3. زر المعاينة (التشغيل)
-        val btnPlay = ImageButton(this).apply {
+        btnPlay = ImageButton(this).apply {
             setImageResource(android.R.drawable.ic_media_play)
             setBackgroundColor(Color.TRANSPARENT)
             setColorFilter(Color.CYAN, PorterDuff.Mode.SRC_IN)
@@ -103,7 +110,7 @@ class FloatingRecorderService : Service() {
         }
 
         // 4. زر الحفظ
-        val btnSave = ImageButton(this).apply {
+        btnSave = ImageButton(this).apply {
             setImageResource(android.R.drawable.ic_menu_save)
             setBackgroundColor(Color.TRANSPARENT)
             setColorFilter(Color.GREEN, PorterDuff.Mode.SRC_IN)
@@ -111,7 +118,7 @@ class FloatingRecorderService : Service() {
         }
 
         // 5. زر الإغلاق
-        val btnClose = ImageButton(this).apply {
+        btnClose = ImageButton(this).apply {
             setImageResource(android.R.drawable.ic_menu_close_clear_cancel)
             setBackgroundColor(Color.TRANSPARENT)
             setColorFilter(Color.GRAY, PorterDuff.Mode.SRC_IN)
