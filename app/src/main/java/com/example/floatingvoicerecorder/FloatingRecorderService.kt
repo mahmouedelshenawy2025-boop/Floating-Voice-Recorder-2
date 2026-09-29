@@ -6,16 +6,17 @@ import android.app.NotificationManager
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.graphics.Color
 import android.graphics.PixelFormat
 import android.media.MediaRecorder
 import android.os.Build
 import android.os.IBinder
 import android.view.Gravity
-import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
 import android.widget.ImageButton
+import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import java.io.File
@@ -60,9 +61,31 @@ class FloatingRecorderService : Service() {
 
     private fun createFloatingWidget() {
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
-        
-        // إنشاء تصميم الفقاعة ديناميكياً لتجنب الاعتماد على ملفات أسبابها تلف التصميم
-        floatingView = LayoutInflater.from(this).inflate(R.layout.layout_floating_widget, null)
+
+        val layout = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            setBackgroundColor(Color.parseColor("#CC000000"))
+            setPadding(16, 16, 16, 16)
+            gravity = Gravity.CENTER
+        }
+
+        val btnRecord = ImageButton(this).apply {
+            setImageResource(android.R.drawable.ic_btn_speak_now)
+            setBackgroundColor(Color.TRANSPARENT)
+            layoutParams = LinearLayout.LayoutParams(120, 120)
+        }
+
+        val btnClose = ImageButton(this).apply {
+            setImageResource(android.R.drawable.ic_menu_close_clear_cancel)
+            setBackgroundColor(Color.TRANSPARENT)
+            layoutParams = LinearLayout.LayoutParams(80, 80).apply {
+                setMargins(16, 0, 0, 0)
+            }
+        }
+
+        layout.addView(btnRecord)
+        layout.addView(btnClose)
+        floatingView = layout
 
         val layoutParamsType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
@@ -76,18 +99,14 @@ class FloatingRecorderService : Service() {
             layoutParamsType,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
             PixelFormat.TRANSLUCENT
-        )
-
-        params.gravity = Gravity.TOP or Gravity.START
-        params.x = 100
-        params.y = 100
+        ).apply {
+            gravity = Gravity.TOP or Gravity.START
+            x = 100
+            y = 200
+        }
 
         windowManager.addView(floatingView, params)
 
-        val btnRecord = floatingView.findViewById<ImageButton>(R.id.btnRecordFloating)
-        val btnClose = floatingView.findViewById<View>(R.id.btnCloseFloating)
-
-        // إمكانية سحب الفقاعة وتطويفها على الشاشة
         floatingView.setOnTouchListener(object : View.OnTouchListener {
             private var initialX = 0
             private var initialY = 0
@@ -114,7 +133,7 @@ class FloatingRecorderService : Service() {
             }
         })
 
-        btnRecord?.setOnClickListener {
+        btnRecord.setOnClickListener {
             if (isRecording) {
                 stopRecording()
                 btnRecord.setImageResource(android.R.drawable.ic_btn_speak_now)
@@ -124,7 +143,7 @@ class FloatingRecorderService : Service() {
             }
         }
 
-        btnClose?.setOnClickListener {
+        btnClose.setOnClickListener {
             stopSelf()
         }
     }
