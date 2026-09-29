@@ -31,12 +31,13 @@ class FloatingRecorderService : Service() {
     private var mediaRecorder: MediaRecorder? = null
     private var mediaPlayer: MediaPlayer? = null
 
+    // متغيرات قابلة للتغيير بواسطة var لمنع خطأ Val cannot be reassigned
     private var isRecording = false
     private var isPaused = false
     private var isPlaying = false
     private var audioFilePath: String = ""
 
-    // إعلان الأزرار في نطاق الكلاس حتى تراها كل الدوال
+    // تعريف الأزرار على مستوى الكلاس حتى تراها جميع الدوال (Unresolved reference fix)
     private lateinit var btnRecord: ImageButton
     private lateinit var btnPause: ImageButton
     private lateinit var btnPlay: ImageButton
@@ -86,14 +87,12 @@ class FloatingRecorderService : Service() {
             gravity = Gravity.CENTER
         }
 
-        // 1. زر التسجيل
         btnRecord = ImageButton(this).apply {
             setImageResource(android.R.drawable.ic_btn_speak_now)
             setBackgroundColor(Color.TRANSPARENT)
             setColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN)
         }
 
-        // 2. زر التوقف المؤقت
         btnPause = ImageButton(this).apply {
             setImageResource(android.R.drawable.ic_media_pause)
             setBackgroundColor(Color.TRANSPARENT)
@@ -101,7 +100,6 @@ class FloatingRecorderService : Service() {
             visibility = View.GONE
         }
 
-        // 3. زر المعاينة (التشغيل)
         btnPlay = ImageButton(this).apply {
             setImageResource(android.R.drawable.ic_media_play)
             setBackgroundColor(Color.TRANSPARENT)
@@ -109,7 +107,6 @@ class FloatingRecorderService : Service() {
             visibility = View.GONE
         }
 
-        // 4. زر الحفظ
         btnSave = ImageButton(this).apply {
             setImageResource(android.R.drawable.ic_menu_save)
             setBackgroundColor(Color.TRANSPARENT)
@@ -117,7 +114,6 @@ class FloatingRecorderService : Service() {
             visibility = View.GONE
         }
 
-        // 5. زر الإغلاق
         btnClose = ImageButton(this).apply {
             setImageResource(android.R.drawable.ic_menu_close_clear_cancel)
             setBackgroundColor(Color.TRANSPARENT)
@@ -159,7 +155,6 @@ class FloatingRecorderService : Service() {
 
         windowManager.addView(floatingView, params)
 
-        // تحريك الفقاعة
         floatingView.setOnTouchListener(object : View.OnTouchListener {
             private var initialX = 0
             private var initialY = 0
@@ -186,7 +181,6 @@ class FloatingRecorderService : Service() {
             }
         })
 
-        // ضغطة زر التسجيل
         btnRecord.setOnClickListener {
             if (!isRecording) {
                 startRecording()
@@ -203,7 +197,6 @@ class FloatingRecorderService : Service() {
             }
         }
 
-        // ضغطة زر التوقف المؤقت
         btnPause.setOnClickListener {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && mediaRecorder != null) {
                 if (!isPaused) {
@@ -220,7 +213,6 @@ class FloatingRecorderService : Service() {
             }
         }
 
-        // ضغطة زر المعاينة
         btnPlay.setOnClickListener {
             if (!isPlaying) {
                 playAudio()
@@ -231,7 +223,6 @@ class FloatingRecorderService : Service() {
             }
         }
 
-        // ضغطة زر الحفظ
         btnSave.setOnClickListener {
             stopAudio()
             Toast.makeText(this, "تم حفظ الصوت بنجاح", Toast.LENGTH_SHORT).show()
