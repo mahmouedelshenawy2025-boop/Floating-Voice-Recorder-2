@@ -31,10 +31,10 @@ class FloatingRecorderService : Service() {
     private var mediaRecorder: MediaRecorder? = null
     private var mediaPlayer: MediaPlayer? = null
 
-    private var isRecording = false
-    private var isPaused = false
-    private var isPlaying = false
-    private var audioFilePath = ""
+    private var isRecording: Boolean = false
+    private var isPaused: Boolean = false
+    private var isPlaying: Boolean = false
+    private var audioFilePath: String = ""
 
     private var btnRecord: ImageButton? = null
     private var btnPause: ImageButton? = null
