@@ -12,10 +12,10 @@ import androidx.appcompat.app.AppCompatActivity
 class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate()
+        super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        val btnStart = findViewById<Button>(R.id.btnStartService) // تأكد من الـ ID في ملف ה-layout
+        val btnStart = findViewById<Button>(R.id.btnStartService)
 
         btnStart?.setOnClickListener {
             checkPermissionsAndStart()
@@ -42,6 +42,6 @@ class MainActivity : AppCompatActivity() {
         } else {
             startService(serviceIntent)
         }
-        finish() // إغلاق واجهة التطبيق فوراً وترك الفقاعة تعمل كخدمة مستقلة
+        finish()
     }
 }
