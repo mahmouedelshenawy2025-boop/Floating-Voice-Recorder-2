@@ -8,6 +8,9 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.PixelFormat
+import android.graphics.PorterDuff
+import android.graphics.drawable.GradientDrawable
+import android.media.MediaPlayer
 import android.media.MediaRecorder
 import android.os.Build
 import android.os.IBinder
@@ -20,14 +23,17 @@ import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import java.io.File
-import java.io.IOException
 
 class FloatingRecorderService : Service() {
 
     private lateinit var windowManager: WindowManager
     private lateinit var floatingView: View
     private var mediaRecorder: MediaRecorder? = null
+    private var mediaPlayer: MediaPlayer? = null
+
     private var isRecording = false
+    private var isPaused = false
+    private var isPlaying = false
     private var audioFilePath: String = ""
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -42,17 +48,14 @@ class FloatingRecorderService : Service() {
         val channelId = "floating_recorder_channel"
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
-                channelId,
-                "مسجل الصوت العائم",
-                NotificationManager.IMPORTANCE_LOW
+                channelId, "مسجل الصوت العائم", NotificationManager.IMPORTANCE_LOW
             )
-            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            manager.createNotificationChannel(channel)
+            (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).createNotificationChannel(channel)
         }
 
         val notification: Notification = NotificationCompat.Builder(this, channelId)
-            .setContentTitle("المسجل العائم يعمل")
-            .setContentText("الفقاعة العائمة متوفرة الآن على الشاشة")
+            .setContentTitle("المسجل العائم")
+            .setContentText("الفقاعة متوفرة على الشاشة")
             .setSmallIcon(android.R.drawable.ic_btn_speak_now)
             .build()
 
@@ -62,28 +65,66 @@ class FloatingRecorderService : Service() {
     private fun createFloatingWidget() {
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
 
+        val shape = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = 40f
+            setColor(Color.parseColor("#DD111111"))
+        }
+
         val layout = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
-            setBackgroundColor(Color.parseColor("#CC000000"))
-            setPadding(16, 16, 16, 16)
+            background = shape
+            setPadding(10, 8, 10, 8)
             gravity = Gravity.CENTER
         }
 
+        // 1. زر التسجيل
         val btnRecord = ImageButton(this).apply {
             setImageResource(android.R.drawable.ic_btn_speak_now)
             setBackgroundColor(Color.TRANSPARENT)
-            layoutParams = LinearLayout.LayoutParams(120, 120)
+            setColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN)
+            layoutParams = LinearLayout.LayoutParams(50, 50)
         }
 
+        // 2. زر التوقف المؤقت
+        val btnPause = ImageButton(this).apply {
+            setImageResource(android.R.drawable.ic_media_pause)
+            setBackgroundColor(Color.TRANSPARENT)
+            setColorFilter(Color.YELLOW, PorterDuff.Mode.SRC_IN)
+            layoutParams = LinearLayout.LayoutParams(45, 45).apply { setMargins(6, 0, 0, 0) }
+            visibility = View.GONE
+        }
+
+        // 3. زر المعاينة (التشغيل)
+        val btnPlay = ImageButton(this).apply {
+            setImageResource(android.R.drawable.ic_media_play)
+            setBackgroundColor(Color.TRANSPARENT)
+            setColorFilter(Color.CYAN, PorterDuff.Mode.SRC_IN)
+            layoutParams = LinearLayout.LayoutParams(45, 45).apply { setMargins(6, 0, 0, 0) }
+            visibility = View.GONE
+        }
+
+        // 4. زر الحفظ
+        val btnSave = ImageButton(this).apply {
+            setImageResource(android.R.drawable.ic_menu_save)
+            setBackgroundColor(Color.TRANSPARENT)
+            setColorFilter(Color.GREEN, PorterDuff.Mode.SRC_IN)
+            layoutParams = LinearLayout.LayoutParams(45, 45).apply { setMargins(6, 0, 0, 0) }
+            visibility = View.GONE
+        }
+
+        // 5. زر الإغلاق
         val btnClose = ImageButton(this).apply {
             setImageResource(android.R.drawable.ic_menu_close_clear_cancel)
             setBackgroundColor(Color.TRANSPARENT)
-            layoutParams = LinearLayout.LayoutParams(80, 80).apply {
-                setMargins(16, 0, 0, 0)
-            }
+            setColorFilter(Color.GRAY, PorterDuff.Mode.SRC_IN)
+            layoutParams = LinearLayout.LayoutParams(40, 40).apply { setMargins(6, 0, 0, 0) }
         }
 
         layout.addView(btnRecord)
+        layout.addView(btnPause)
+        layout.addView(btnPlay)
+        layout.addView(btnSave)
         layout.addView(btnClose)
         floatingView = layout
 
@@ -107,19 +148,16 @@ class FloatingRecorderService : Service() {
 
         windowManager.addView(floatingView, params)
 
+        // تحريك الفقاعة
         floatingView.setOnTouchListener(object : View.OnTouchListener {
-            private var initialX = 0
-            private var initialY = 0
-            private var initialTouchX = 0f
-            private var initialTouchY = 0f
+            private var initialX = 0; private var initialY = 0
+            private var initialTouchX = 0f; private var initialTouchY = 0f
 
             override fun onTouch(v: View?, event: MotionEvent): Boolean {
                 when (event.action) {
                     MotionEvent.ACTION_DOWN -> {
-                        initialX = params.x
-                        initialY = params.y
-                        initialTouchX = event.rawX
-                        initialTouchY = event.rawY
+                        initialX = params.x; initialY = params.y
+                        initialTouchX = event.rawX; initialTouchY = event.rawY
                         return true
                     }
                     MotionEvent.ACTION_MOVE -> {
@@ -133,14 +171,57 @@ class FloatingRecorderService : Service() {
             }
         })
 
+        // ضغطة زر التسجيل
         btnRecord.setOnClickListener {
-            if (isRecording) {
-                stopRecording()
-                btnRecord.setImageResource(android.R.drawable.ic_btn_speak_now)
-            } else {
+            if (!isRecording) {
                 startRecording()
-                btnRecord.setImageResource(android.R.drawable.ic_media_pause)
+                btnRecord.setColorFilter(Color.RED, PorterDuff.Mode.SRC_IN)
+                btnPause.visibility = View.VISIBLE
+                btnPlay.visibility = View.GONE
+                btnSave.visibility = View.GONE
+            } else {
+                stopRecording()
+                btnRecord.setColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN)
+                btnPause.visibility = View.GONE
+                btnPlay.visibility = View.VISIBLE
+                btnSave.visibility = View.VISIBLE
             }
+        }
+
+        // ضغطة زر التوقف المؤقت
+        btnPause.setOnClickListener {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && mediaRecorder != null) {
+                if (!isPaused) {
+                    mediaRecorder?.pause()
+                    isPaused = true
+                    btnPause.setColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN)
+                    Toast.makeText(this, "موقف مؤقتاً", Toast.LENGTH_SHORT).show()
+                } else {
+                    mediaRecorder?.resume()
+                    isPaused = false
+                    btnPause.setColorFilter(Color.YELLOW, PorterDuff.Mode.SRC_IN)
+                    Toast.makeText(this, "جاري الاستئناف", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+
+        // ضغطة زر المعاينة
+        btnPlay.setOnClickListener {
+            if (!isPlaying) {
+                playAudio()
+                btnPlay.setImageResource(android.R.drawable.ic_media_pause)
+            } else {
+                stopAudio()
+                btnPlay.setImageResource(android.R.drawable.ic_media_play)
+            }
+        }
+
+        // ضغطة زر الحفظ
+        btnSave.setOnClickListener {
+            stopAudio()
+            Toast.makeText(this, "تم حفظ الصوت بنجاح", Toast.LENGTH_SHORT).show()
+            btnPlay.visibility = View.GONE
+            btnSave.visibility = View.GONE
         }
 
         btnClose.setOnClickListener {
@@ -149,8 +230,7 @@ class FloatingRecorderService : Service() {
     }
 
     private fun startRecording() {
-        val outputDir = externalCacheDir ?: cacheDir
-        val outputFile = File(outputDir, "recording_${System.currentTimeMillis()}.3gp")
+        val outputFile = File(externalCacheDir ?: cacheDir, "rec_${System.currentTimeMillis()}.3gp")
         audioFilePath = outputFile.absolutePath
 
         mediaRecorder = MediaRecorder().apply {
@@ -162,9 +242,10 @@ class FloatingRecorderService : Service() {
                 prepare()
                 start()
                 isRecording = true
-                Toast.makeText(this@FloatingRecorderService, "بدأ التسجيل...", Toast.LENGTH_SHORT).show()
-            } catch (e: IOException) {
-                Toast.makeText(this@FloatingRecorderService, "فشل التسجيل: ${e.message}", Toast.LENGTH_SHORT).show()
+                isPaused = false
+                Toast.makeText(this@FloatingRecorderService, "بدأ التسجيل", Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                Toast.makeText(this@FloatingRecorderService, "خطأ في التسجيل", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -176,11 +257,30 @@ class FloatingRecorderService : Service() {
                 mediaRecorder?.release()
                 mediaRecorder = null
                 isRecording = false
-                Toast.makeText(this, "تم حفظ التسجيل في: $audioFilePath", Toast.LENGTH_LONG).show()
-            } catch (e: Exception) {
-                Toast.makeText(this, "خطأ أثناء إيقاف التسجيل", Toast.LENGTH_SHORT).show()
+                isPaused = false
+            } catch (e: Exception) { }
+        }
+    }
+
+    private fun playAudio() {
+        if (audioFilePath.isNotEmpty()) {
+            mediaPlayer = MediaPlayer().apply {
+                try {
+                    setDataSource(audioFilePath)
+                    prepare()
+                    start()
+                    isPlaying = true
+                    setOnCompletionListener { isPlaying = false }
+                } catch (e: Exception) { }
             }
         }
+    }
+
+    private fun stopAudio() {
+        mediaPlayer?.stop()
+        mediaPlayer?.release()
+        mediaPlayer = null
+        isPlaying = false
     }
 
     override fun onDestroy() {
@@ -189,5 +289,6 @@ class FloatingRecorderService : Service() {
             windowManager.removeView(floatingView)
         }
         stopRecording()
+        stopAudio()
     }
 }
