@@ -31,10 +31,10 @@ class FloatingRecorderService : Service() {
     private var mediaRecorder: MediaRecorder? = null
     private var mediaPlayer: MediaPlayer? = null
 
-    private var isRecording: Boolean = false
-    private var isPaused: Boolean = false
-    private var isPlaying: Boolean = false
-    private var audioFilePath: String = ""
+    private var isRecording = false
+    private var isPaused = false
+    private var isPlaying = false
+    private var audioFilePath = ""
 
     private var btnRecord: ImageButton? = null
     private var btnPause: ImageButton? = null
@@ -51,18 +51,14 @@ class FloatingRecorderService : Service() {
     }
 
     private fun startForegroundService() {
-        var channelId = "floating_recorder_channel"
+        val channelId = "floating_recorder_channel"
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            var channel = NotificationChannel(
-                channelId,
-                "مسجل الصوت العائم",
-                NotificationManager.IMPORTANCE_LOW
-            )
-            var manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            val channel = NotificationChannel(channelId, "مسجل الصوت", NotificationManager.IMPORTANCE_LOW)
+            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             manager.createNotificationChannel(channel)
         }
 
-        var notification: Notification = NotificationCompat.Builder(this, channelId)
+        val notification: Notification = NotificationCompat.Builder(this, channelId)
             .setContentTitle("المسجل العائم")
             .setContentText("الفقاعة متوفرة على الشاشة")
             .setSmallIcon(android.R.drawable.ic_btn_speak_now)
@@ -74,13 +70,13 @@ class FloatingRecorderService : Service() {
     private fun createFloatingWidget() {
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
 
-        var shape = GradientDrawable().apply {
+        val shape = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
             cornerRadius = 30f
             setColor(Color.parseColor("#CC000000"))
         }
 
-        var layout = LinearLayout(this).apply {
+        val layout = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             background = shape
             setPadding(16, 12, 16, 12)
@@ -120,12 +116,10 @@ class FloatingRecorderService : Service() {
             setColorFilter(Color.GRAY, PorterDuff.Mode.SRC_IN)
         }
 
-        var buttonParams = LinearLayout.LayoutParams(
+        val buttonParams = LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.WRAP_CONTENT,
             LinearLayout.LayoutParams.WRAP_CONTENT
-        ).apply {
-            setMargins(8, 0, 8, 0)
-        }
+        ).apply { setMargins(8, 0, 8, 0) }
 
         layout.addView(btnRecord, buttonParams)
         layout.addView(btnPause, buttonParams)
@@ -134,14 +128,14 @@ class FloatingRecorderService : Service() {
         layout.addView(btnClose, buttonParams)
         floatingView = layout
 
-        var layoutParamsType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        val layoutParamsType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
         } else {
             @Suppress("DEPRECATION")
             WindowManager.LayoutParams.TYPE_PHONE
         }
 
-        var params = WindowManager.LayoutParams(
+        val params = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
             layoutParamsType,
@@ -162,7 +156,7 @@ class FloatingRecorderService : Service() {
             private var initialTouchY = 0f
 
             override fun onTouch(v: View?, event: MotionEvent): Boolean {
-                var layoutParams = floatingView?.layoutParams as? WindowManager.LayoutParams ?: return false
+                val layoutParams = floatingView?.layoutParams as? WindowManager.LayoutParams ?: return false
                 when (event.action) {
                     MotionEvent.ACTION_DOWN -> {
                         initialX = layoutParams.x
@@ -204,12 +198,10 @@ class FloatingRecorderService : Service() {
                     mediaRecorder?.pause()
                     isPaused = true
                     btnPause?.setColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN)
-                    Toast.makeText(this, "موقف مؤقتاً", Toast.LENGTH_SHORT).show()
                 } else {
                     mediaRecorder?.resume()
                     isPaused = false
                     btnPause?.setColorFilter(Color.YELLOW, PorterDuff.Mode.SRC_IN)
-                    Toast.makeText(this, "جاري الاستئناف", Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -226,18 +218,16 @@ class FloatingRecorderService : Service() {
 
         btnSave?.setOnClickListener {
             stopAudio()
-            Toast.makeText(this, "تم حفظ الصوت بنجاح", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "تم الحفظ بنجاح", Toast.LENGTH_SHORT).show()
             btnPlay?.visibility = View.GONE
             btnSave?.visibility = View.GONE
         }
 
-        btnClose?.setOnClickListener {
-            stopSelf()
-        }
+        btnClose?.setOnClickListener { stopSelf() }
     }
 
     private fun startRecording() {
-        var outputFile = File(externalCacheDir ?: cacheDir, "rec_${System.currentTimeMillis()}.3gp")
+        val outputFile = File(externalCacheDir ?: cacheDir, "rec_${System.currentTimeMillis()}.3gp")
         audioFilePath = outputFile.absolutePath
 
         mediaRecorder = MediaRecorder().apply {
@@ -250,10 +240,7 @@ class FloatingRecorderService : Service() {
                 start()
                 isRecording = true
                 isPaused = false
-                Toast.makeText(this@FloatingRecorderService, "بدأ التسجيل", Toast.LENGTH_SHORT).show()
-            } catch (e: Exception) {
-                Toast.makeText(this@FloatingRecorderService, "خطأ في التسجيل", Toast.LENGTH_SHORT).show()
-            }
+            } catch (e: Exception) { }
         }
     }
 
@@ -295,9 +282,7 @@ class FloatingRecorderService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
-        if (floatingView != null) {
-            windowManager?.removeView(floatingView)
-        }
+        if (floatingView != null) windowManager?.removeView(floatingView)
         stopRecording()
         stopAudio()
     }
