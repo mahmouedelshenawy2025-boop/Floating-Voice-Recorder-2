@@ -15,6 +15,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        // تم استخدام findViewById لتفادي خطأ Unresolved reference
         val btnStart = findViewById<Button>(R.id.btnStartService)
 
         btnStart?.setOnClickListener {
