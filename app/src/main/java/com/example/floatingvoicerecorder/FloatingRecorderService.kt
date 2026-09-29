@@ -78,31 +78,31 @@ class FloatingRecorderService : Service() {
         try {
             val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
             wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "FloatingRecorder::WakeLock")
-            wakeLock?.acquire(10 * 60 * 1000L /* 10 دقائق */)
+            wakeLock?.acquire(30 * 60 * 1000L /* 30 دقيقة */)
         } catch (e: Exception) {
             e.printStackTrace()
         }
     }
 
     private fun startForegroundNotification() {
-        val channelId = "floating_recorder_channel_v3"
+        val channelId = "floating_recorder_channel_v4"
         val channelName = "Floating Voice Recorder"
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 channelId,
                 channelName,
-                NotificationManager.IMPORTANCE_LOW
+                NotificationManager.IMPORTANCE_HIGH
             )
             val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             manager.createNotificationChannel(channel)
         }
 
         val notification: Notification = NotificationCompat.Builder(this, channelId)
-            .setContentTitle("مسجل الصوت العائم يعمل")
-            .setContentText("التسجيل مستمر حتى لو أغلقت الشاشة")
+            .setContentTitle("التسجيل نشط في الخلفية")
+            .setContentText("جاري الحفاظ على التسجيل حتى عند إغلاق الشاشة")
             .setSmallIcon(android.R.drawable.ic_btn_speak_now)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setOngoing(true)
             .build()
 
