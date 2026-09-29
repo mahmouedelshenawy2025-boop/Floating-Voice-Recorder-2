@@ -51,18 +51,18 @@ class FloatingRecorderService : Service() {
     }
 
     private fun startForegroundService() {
-        val channelId = "floating_recorder_channel"
+        var channelId = "floating_recorder_channel"
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
+            var channel = NotificationChannel(
                 channelId,
                 "مسجل الصوت العائم",
                 NotificationManager.IMPORTANCE_LOW
             )
-            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            var manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             manager.createNotificationChannel(channel)
         }
 
-        val notification: Notification = NotificationCompat.Builder(this, channelId)
+        var notification: Notification = NotificationCompat.Builder(this, channelId)
             .setContentTitle("المسجل العائم")
             .setContentText("الفقاعة متوفرة على الشاشة")
             .setSmallIcon(android.R.drawable.ic_btn_speak_now)
@@ -74,13 +74,13 @@ class FloatingRecorderService : Service() {
     private fun createFloatingWidget() {
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
 
-        val shape = GradientDrawable().apply {
+        var shape = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
             cornerRadius = 30f
             setColor(Color.parseColor("#CC000000"))
         }
 
-        val layout = LinearLayout(this).apply {
+        var layout = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             background = shape
             setPadding(16, 12, 16, 12)
@@ -120,7 +120,7 @@ class FloatingRecorderService : Service() {
             setColorFilter(Color.GRAY, PorterDuff.Mode.SRC_IN)
         }
 
-        val buttonParams = LinearLayout.LayoutParams(
+        var buttonParams = LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.WRAP_CONTENT,
             LinearLayout.LayoutParams.WRAP_CONTENT
         ).apply {
@@ -134,14 +134,14 @@ class FloatingRecorderService : Service() {
         layout.addView(btnClose, buttonParams)
         floatingView = layout
 
-        val layoutParamsType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        var layoutParamsType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
         } else {
             @Suppress("DEPRECATION")
             WindowManager.LayoutParams.TYPE_PHONE
         }
 
-        val params = WindowManager.LayoutParams(
+        var params = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
             layoutParamsType,
@@ -162,7 +162,7 @@ class FloatingRecorderService : Service() {
             private var initialTouchY = 0f
 
             override fun onTouch(v: View?, event: MotionEvent): Boolean {
-                val layoutParams = floatingView?.layoutParams as? WindowManager.LayoutParams ?: return false
+                var layoutParams = floatingView?.layoutParams as? WindowManager.LayoutParams ?: return false
                 when (event.action) {
                     MotionEvent.ACTION_DOWN -> {
                         initialX = layoutParams.x
@@ -237,7 +237,7 @@ class FloatingRecorderService : Service() {
     }
 
     private fun startRecording() {
-        val outputFile = File(externalCacheDir ?: cacheDir, "rec_${System.currentTimeMillis()}.3gp")
+        var outputFile = File(externalCacheDir ?: cacheDir, "rec_${System.currentTimeMillis()}.3gp")
         audioFilePath = outputFile.absolutePath
 
         mediaRecorder = MediaRecorder().apply {
