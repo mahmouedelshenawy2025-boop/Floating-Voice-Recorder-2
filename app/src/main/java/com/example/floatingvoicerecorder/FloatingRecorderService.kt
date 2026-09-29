@@ -26,23 +26,21 @@ import java.io.File
 
 class FloatingRecorderService : Service() {
 
-    private lateinit var windowManager: WindowManager
-    private lateinit var floatingView: View
+    private var windowManager: WindowManager? = null
+    private var floatingView: View? = null
     private var mediaRecorder: MediaRecorder? = null
     private var mediaPlayer: MediaPlayer? = null
 
-    // متغيرات قابلة للتغيير بواسطة var لمنع خطأ Val cannot be reassigned
-    private var isRecording = false
-    private var isPaused = false
-    private var isPlaying = false
+    private var isRecording: Boolean = false
+    private var isPaused: Boolean = false
+    private var isPlaying: Boolean = false
     private var audioFilePath: String = ""
 
-    // تعريف الأزرار على مستوى الكلاس حتى تراها جميع الدوال (Unresolved reference fix)
-    private lateinit var btnRecord: ImageButton
-    private lateinit var btnPause: ImageButton
-    private lateinit var btnPlay: ImageButton
-    private lateinit var btnSave: ImageButton
-    private lateinit var btnClose: ImageButton
+    private var btnRecord: ImageButton? = null
+    private var btnPause: ImageButton? = null
+    private var btnPlay: ImageButton? = null
+    private var btnSave: ImageButton? = null
+    private var btnClose: ImageButton? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -153,9 +151,9 @@ class FloatingRecorderService : Service() {
             y = 200
         }
 
-        windowManager.addView(floatingView, params)
+        windowManager?.addView(floatingView, params)
 
-        floatingView.setOnTouchListener(object : View.OnTouchListener {
+        floatingView?.setOnTouchListener(object : View.OnTouchListener {
             private var initialX = 0
             private var initialY = 0
             private var initialTouchX = 0f
@@ -173,7 +171,7 @@ class FloatingRecorderService : Service() {
                     MotionEvent.ACTION_MOVE -> {
                         params.x = initialX + (event.rawX - initialTouchX).toInt()
                         params.y = initialY + (event.rawY - initialTouchY).toInt()
-                        windowManager.updateViewLayout(floatingView, params)
+                        windowManager?.updateViewLayout(floatingView, params)
                         return true
                     }
                 }
@@ -181,56 +179,56 @@ class FloatingRecorderService : Service() {
             }
         })
 
-        btnRecord.setOnClickListener {
+        btnRecord?.setOnClickListener {
             if (!isRecording) {
                 startRecording()
-                btnRecord.setColorFilter(Color.RED, PorterDuff.Mode.SRC_IN)
-                btnPause.visibility = View.VISIBLE
-                btnPlay.visibility = View.GONE
-                btnSave.visibility = View.GONE
+                btnRecord?.setColorFilter(Color.RED, PorterDuff.Mode.SRC_IN)
+                btnPause?.visibility = View.VISIBLE
+                btnPlay?.visibility = View.GONE
+                btnSave?.visibility = View.GONE
             } else {
                 stopRecording()
-                btnRecord.setColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN)
-                btnPause.visibility = View.GONE
-                btnPlay.visibility = View.VISIBLE
-                btnSave.visibility = View.VISIBLE
+                btnRecord?.setColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN)
+                btnPause?.visibility = View.GONE
+                btnPlay?.visibility = View.VISIBLE
+                btnSave?.visibility = View.VISIBLE
             }
         }
 
-        btnPause.setOnClickListener {
+        btnPause?.setOnClickListener {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && mediaRecorder != null) {
                 if (!isPaused) {
                     mediaRecorder?.pause()
                     isPaused = true
-                    btnPause.setColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN)
+                    btnPause?.setColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN)
                     Toast.makeText(this, "موقف مؤقتاً", Toast.LENGTH_SHORT).show()
                 } else {
                     mediaRecorder?.resume()
                     isPaused = false
-                    btnPause.setColorFilter(Color.YELLOW, PorterDuff.Mode.SRC_IN)
+                    btnPause?.setColorFilter(Color.YELLOW, PorterDuff.Mode.SRC_IN)
                     Toast.makeText(this, "جاري الاستئناف", Toast.LENGTH_SHORT).show()
                 }
             }
         }
 
-        btnPlay.setOnClickListener {
+        btnPlay?.setOnClickListener {
             if (!isPlaying) {
                 playAudio()
-                btnPlay.setImageResource(android.R.drawable.ic_media_pause)
+                btnPlay?.setImageResource(android.R.drawable.ic_media_pause)
             } else {
                 stopAudio()
-                btnPlay.setImageResource(android.R.drawable.ic_media_play)
+                btnPlay?.setImageResource(android.R.drawable.ic_media_play)
             }
         }
 
-        btnSave.setOnClickListener {
+        btnSave?.setOnClickListener {
             stopAudio()
             Toast.makeText(this, "تم حفظ الصوت بنجاح", Toast.LENGTH_SHORT).show()
-            btnPlay.visibility = View.GONE
-            btnSave.visibility = View.GONE
+            btnPlay?.visibility = View.GONE
+            btnSave?.visibility = View.GONE
         }
 
-        btnClose.setOnClickListener {
+        btnClose?.setOnClickListener {
             stopSelf()
         }
     }
@@ -278,7 +276,7 @@ class FloatingRecorderService : Service() {
                     isPlaying = true
                     setOnCompletionListener {
                         isPlaying = false
-                        btnPlay.setImageResource(android.R.drawable.ic_media_play)
+                        btnPlay?.setImageResource(android.R.drawable.ic_media_play)
                     }
                 } catch (e: Exception) { }
             }
@@ -294,8 +292,8 @@ class FloatingRecorderService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
-        if (::floatingView.isInitialized) {
-            windowManager.removeView(floatingView)
+        if (floatingView != null) {
+            windowManager?.removeView(floatingView)
         }
         stopRecording()
         stopAudio()
