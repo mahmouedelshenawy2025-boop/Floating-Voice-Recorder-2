@@ -50,7 +50,8 @@ class FloatingRecorderService : Service() {
             val channel = NotificationChannel(
                 channelId, "مسجل الصوت العائم", NotificationManager.IMPORTANCE_LOW
             )
-            (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).createNotificationChannel(channel)
+            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            manager.createNotificationChannel(channel)
         }
 
         val notification: Notification = NotificationCompat.Builder(this, channelId)
@@ -67,14 +68,14 @@ class FloatingRecorderService : Service() {
 
         val shape = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
-            cornerRadius = 40f
-            setColor(Color.parseColor("#DD111111"))
+            cornerRadius = 30f
+            setColor(Color.parseColor("#CC000000"))
         }
 
         val layout = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             background = shape
-            setPadding(10, 8, 10, 8)
+            setPadding(16, 12, 16, 12)
             gravity = Gravity.CENTER
         }
 
@@ -83,7 +84,6 @@ class FloatingRecorderService : Service() {
             setImageResource(android.R.drawable.ic_btn_speak_now)
             setBackgroundColor(Color.TRANSPARENT)
             setColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN)
-            layoutParams = LinearLayout.LayoutParams(50, 50)
         }
 
         // 2. زر التوقف المؤقت
@@ -91,7 +91,6 @@ class FloatingRecorderService : Service() {
             setImageResource(android.R.drawable.ic_media_pause)
             setBackgroundColor(Color.TRANSPARENT)
             setColorFilter(Color.YELLOW, PorterDuff.Mode.SRC_IN)
-            layoutParams = LinearLayout.LayoutParams(45, 45).apply { setMargins(6, 0, 0, 0) }
             visibility = View.GONE
         }
 
@@ -100,7 +99,6 @@ class FloatingRecorderService : Service() {
             setImageResource(android.R.drawable.ic_media_play)
             setBackgroundColor(Color.TRANSPARENT)
             setColorFilter(Color.CYAN, PorterDuff.Mode.SRC_IN)
-            layoutParams = LinearLayout.LayoutParams(45, 45).apply { setMargins(6, 0, 0, 0) }
             visibility = View.GONE
         }
 
@@ -109,7 +107,6 @@ class FloatingRecorderService : Service() {
             setImageResource(android.R.drawable.ic_menu_save)
             setBackgroundColor(Color.TRANSPARENT)
             setColorFilter(Color.GREEN, PorterDuff.Mode.SRC_IN)
-            layoutParams = LinearLayout.LayoutParams(45, 45).apply { setMargins(6, 0, 0, 0) }
             visibility = View.GONE
         }
 
@@ -118,19 +115,26 @@ class FloatingRecorderService : Service() {
             setImageResource(android.R.drawable.ic_menu_close_clear_cancel)
             setBackgroundColor(Color.TRANSPARENT)
             setColorFilter(Color.GRAY, PorterDuff.Mode.SRC_IN)
-            layoutParams = LinearLayout.LayoutParams(40, 40).apply { setMargins(6, 0, 0, 0) }
         }
 
-        layout.addView(btnRecord)
-        layout.addView(btnPause)
-        layout.addView(btnPlay)
-        layout.addView(btnSave)
-        layout.addView(btnClose)
+        val buttonParams = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        ).apply {
+            setMargins(8, 0, 8, 0)
+        }
+
+        layout.addView(btnRecord, buttonParams)
+        layout.addView(btnPause, buttonParams)
+        layout.addView(btnPlay, buttonParams)
+        layout.addView(btnSave, buttonParams)
+        layout.addView(btnClose, buttonParams)
         floatingView = layout
 
         val layoutParamsType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
         } else {
+            @Suppress("DEPRECATION")
             WindowManager.LayoutParams.TYPE_PHONE
         }
 
@@ -150,14 +154,18 @@ class FloatingRecorderService : Service() {
 
         // تحريك الفقاعة
         floatingView.setOnTouchListener(object : View.OnTouchListener {
-            private var initialX = 0; private var initialY = 0
-            private var initialTouchX = 0f; private var initialTouchY = 0f
+            private var initialX = 0
+            private var initialY = 0
+            private var initialTouchX = 0f
+            private var initialTouchY = 0f
 
             override fun onTouch(v: View?, event: MotionEvent): Boolean {
                 when (event.action) {
                     MotionEvent.ACTION_DOWN -> {
-                        initialX = params.x; initialY = params.y
-                        initialTouchX = event.rawX; initialTouchY = event.rawY
+                        initialX = params.x
+                        initialY = params.y
+                        initialTouchX = event.rawX
+                        initialTouchY = event.rawY
                         return true
                     }
                     MotionEvent.ACTION_MOVE -> {
@@ -270,7 +278,9 @@ class FloatingRecorderService : Service() {
                     prepare()
                     start()
                     isPlaying = true
-                    setOnCompletionListener { isPlaying = false }
+                    setOnCompletionListener {
+                        isPlaying = false
+                    }
                 } catch (e: Exception) { }
             }
         }
