@@ -25,7 +25,6 @@ class MainActivity : AppCompatActivity() {
             checkPermissionsAndStart()
         }
 
-        // تشغيل فوري إذا كانت الإذونات ممنوحة مسبقاً
         checkPermissionsAndStart()
     }
 
@@ -55,6 +54,6 @@ class MainActivity : AppCompatActivity() {
         } else {
             startService(serviceIntent)
         }
-        finish() // إغلاق الواجهة الرئيسية لتعمل الفقاعة حرّة على الشاشة
+        finish()
     }
 }
