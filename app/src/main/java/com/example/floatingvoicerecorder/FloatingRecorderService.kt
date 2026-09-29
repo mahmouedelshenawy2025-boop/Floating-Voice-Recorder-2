@@ -17,6 +17,7 @@ import android.os.Environment
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import android.os.PowerManager
 import android.provider.MediaStore
 import android.view.Gravity
 import android.view.MotionEvent
@@ -41,6 +42,7 @@ class FloatingRecorderService : Service() {
     private var floatingView: View? = null
     private var mediaRecorder: MediaRecorder? = null
     private var mediaPlayer: MediaPlayer? = null
+    private var wakeLock: PowerManager.WakeLock? = null
 
     private var isRecording = false
     private var isPaused = false
@@ -60,15 +62,28 @@ class FloatingRecorderService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // نضمن أن الخدمة تعيد تشغيل نفسها ولا تتوقف بتسكير التطبيق
+        return START_STICKY
+    }
+
     override fun onCreate() {
         super.onCreate()
         isRunning = true
+        acquireWakeLock()
         startForegroundNotification()
         createFloatingWidget()
     }
 
+    private fun acquireWakeLock() {
+        // حماية الخدمة من وضع النوم العميق للنظام عند إغلاق الشاشة
+        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+        wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "FloatingRecorder::WakeLock")
+        wakeLock?.acquire(10 * 60 * 1000L /* 10 دقائق */)
+    }
+
     private fun startForegroundNotification() {
-        val channelId = "floating_recorder_channel_v2"
+        val channelId = "floating_recorder_channel_v3"
         val channelName = "Floating Voice Recorder"
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -82,8 +97,8 @@ class FloatingRecorderService : Service() {
         }
 
         val notification: Notification = NotificationCompat.Builder(this, channelId)
-            .setContentTitle("مسجل الصوت العائم")
-            .setContentText("الفقاعة نشطة على الشاشة")
+            .setContentTitle("مسجل الصوت العائم يعمل")
+            .setContentText("التسجيل مستمر حتى لو أغلقت الشاشة")
             .setSmallIcon(android.R.drawable.ic_btn_speak_now)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setOngoing(true)
@@ -134,7 +149,6 @@ class FloatingRecorderService : Service() {
             setPadding(10, 0, 10, 0)
         }
 
-        // الأزرار الرئيسية
         btnRecord = Button(this).apply {
             text = "🔴"
             textSize = 16f
@@ -148,7 +162,6 @@ class FloatingRecorderService : Service() {
             visibility = View.GONE
         }
 
-        // أزرار المعاينة والتسجيل
         btnPlayPreview = Button(this).apply {
             text = "▶ المعاينة"
             textSize = 12f
@@ -188,7 +201,6 @@ class FloatingRecorderService : Service() {
 
         floatingView = container
 
-        // أحداث الضغط
         btnRecord.setOnClickListener {
             if (!isRecording) {
                 if (startAudioRecording()) {
@@ -211,37 +223,19 @@ class FloatingRecorderService : Service() {
                 if (!isPaused) {
                     pauseAudioRecording()
                     btnPause.text = "▶"
-                    pauseTimer()
                 } else {
                     resumeAudioRecording()
                     btnPause.text = "⏸"
-                    resumeTimer()
                 }
             }
         }
 
-        btnPlayPreview.setOnClickListener {
-            togglePreviewPlayback()
-        }
+        btnPlayPreview.setOnClickListener { togglePreviewPlayback() }
+        btnSave.setOnClickListener { saveRecordingToPublicFolder(); resetUI() }
+        btnDiscard.setOnClickListener { discardTempRecording(); resetUI() }
+        btnClose.setOnClickListener { stopAudioRecording(); stopPreviewPlayback(); stopSelf() }
 
-        btnSave.setOnClickListener {
-            saveRecordingToPublicFolder()
-            resetUI()
-        }
-
-        btnDiscard.setOnClickListener {
-            discardTempRecording()
-            resetUI()
-            Toast.makeText(this, "تم حذف التسجيل المؤقت", Toast.LENGTH_SHORT).show()
-        }
-
-        btnClose.setOnClickListener {
-            stopAudioRecording()
-            stopPreviewPlayback()
-            stopSelf()
-        }
-
-        // إمكانية السحب والتحريك
+        // تحسين سحب الفقاعة ليكون خفيفاً وسريع الاستجابة
         container.setOnTouchListener(object : View.OnTouchListener {
             private var initialX = 0
             private var initialY = 0
@@ -258,8 +252,12 @@ class FloatingRecorderService : Service() {
                         return false
                     }
                     MotionEvent.ACTION_MOVE -> {
-                        params.x = initialX + (event.rawX - initialTouchX).toInt()
-                        params.y = initialY + (event.rawY - initialTouchY).toInt()
+                        val deltaX = (event.rawX - initialTouchX).toInt()
+                        val deltaY = (event.rawY - initialTouchY).toInt()
+                        
+                        // تحريك الشاشة بسلاسة مع تقليل التدفق
+                        params.x = initialX + deltaX
+                        params.y = initialY + deltaY
                         windowManager?.updateViewLayout(floatingView, params)
                         return true
                     }
@@ -295,11 +293,11 @@ class FloatingRecorderService : Service() {
             }
             isRecording = true
             isPaused = false
-            Toast.makeText(this, "جاري التسجيل الان...", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "جاري التسجيل...", Toast.LENGTH_SHORT).show()
             true
         } catch (e: Exception) {
             e.printStackTrace()
-            Toast.makeText(this, "فشل بدء التسجيل: ${e.message}", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "فشل التسجيل: ${e.message}", Toast.LENGTH_LONG).show()
             false
         }
     }
@@ -309,10 +307,7 @@ class FloatingRecorderService : Service() {
             try {
                 mediaRecorder?.pause()
                 isPaused = true
-                Toast.makeText(this, "تم الإيقاف المؤقت", Toast.LENGTH_SHORT).show()
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
+            } catch (e: Exception) { e.printStackTrace() }
         }
     }
 
@@ -321,10 +316,7 @@ class FloatingRecorderService : Service() {
             try {
                 mediaRecorder?.resume()
                 isPaused = false
-                Toast.makeText(this, "تم استئناف التسجيل", Toast.LENGTH_SHORT).show()
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
+            } catch (e: Exception) { e.printStackTrace() }
         }
     }
 
@@ -336,20 +328,13 @@ class FloatingRecorderService : Service() {
                 mediaRecorder = null
                 isRecording = false
                 isPaused = false
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
+            } catch (e: Exception) { e.printStackTrace() }
         }
     }
 
     private fun togglePreviewPlayback() {
         if (tempFile == null || !tempFile!!.exists()) return
-
-        if (isPlayingPreview) {
-            stopPreviewPlayback()
-        } else {
-            startPreviewPlayback()
-        }
+        if (isPlayingPreview) stopPreviewPlayback() else startPreviewPlayback()
     }
 
     private fun startPreviewPlayback() {
@@ -358,16 +343,11 @@ class FloatingRecorderService : Service() {
                 setDataSource(tempFile!!.absolutePath)
                 prepare()
                 start()
-                setOnCompletionListener {
-                    stopPreviewPlayback()
-                }
+                setOnCompletionListener { stopPreviewPlayback() }
             }
             isPlayingPreview = true
-            btnPlayPreview.text = "⏹ إيقاف المعاينة"
-        } catch (e: Exception) {
-            e.printStackTrace()
-            Toast.makeText(this, "فشل تشغيل المعاينة", Toast.LENGTH_SHORT).show()
-        }
+            btnPlayPreview.text = "⏹ إيقاف"
+        } catch (e: Exception) { e.printStackTrace() }
     }
 
     private fun stopPreviewPlayback() {
@@ -392,7 +372,6 @@ class FloatingRecorderService : Service() {
 
     private fun saveRecordingToPublicFolder() {
         if (tempFile == null || !tempFile!!.exists()) return
-
         stopPreviewPlayback()
         val fileName = "REC_${System.currentTimeMillis()}.3gp"
 
@@ -402,25 +381,14 @@ class FloatingRecorderService : Service() {
                 put(MediaStore.Audio.Media.MIME_TYPE, "audio/3gpp")
                 put(MediaStore.Audio.Media.RELATIVE_PATH, "${Environment.DIRECTORY_MUSIC}/FloatingRecordings")
             }
-
             val uri = contentResolver.insert(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, values)
             if (uri != null) {
-                contentResolver.openOutputStream(uri)?.use { outputStream ->
-                    tempFile!!.inputStream().use { inputStream ->
-                        inputStream.copyTo(outputStream)
-                    }
+                contentResolver.openOutputStream(uri)?.use { out ->
+                    tempFile!!.inputStream().use { inp -> inp.copyTo(out) }
                 }
-                Toast.makeText(this, "تم الحفظ بنجاح في Music/FloatingRecordings", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, "تم الحفظ في Music/FloatingRecordings", Toast.LENGTH_LONG).show()
             }
-        } else {
-            val musicFolder = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC), "FloatingRecordings")
-            if (!musicFolder.exists()) musicFolder.mkdirs()
-
-            val destFile = File(musicFolder, fileName)
-            tempFile!!.copyTo(destFile, overwrite = true)
-            Toast.makeText(this, "تم الحفظ بنجاح!", Toast.LENGTH_LONG).show()
         }
-
         discardTempRecording()
     }
 
@@ -453,14 +421,6 @@ class FloatingRecorderService : Service() {
         handler.post(timerRunnable!!)
     }
 
-    private fun pauseTimer() {
-        // يتم الاحتفاظ بالقيمة كما هي
-    }
-
-    private fun resumeTimer() {
-        // يستأنف الحساب تلقائياً في Runnable
-    }
-
     private fun stopTimer() {
         timerRunnable?.let { handler.removeCallbacks(it) }
         tvTimer.text = "00:00"
@@ -469,11 +429,10 @@ class FloatingRecorderService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         isRunning = false
+        if (wakeLock?.isHeld == true) wakeLock?.release()
         stopAudioRecording()
         stopPreviewPlayback()
         discardTempRecording()
-        if (floatingView != null) {
-            windowManager?.removeView(floatingView)
-        }
+        if (floatingView != null) windowManager?.removeView(floatingView)
     }
 }
