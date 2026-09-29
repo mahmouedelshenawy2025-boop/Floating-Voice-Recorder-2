@@ -280,6 +280,7 @@ class FloatingRecorderService : Service() {
                     isPlaying = true
                     setOnCompletionListener {
                         isPlaying = false
+                        btnPlay.setImageResource(android.R.drawable.ic_media_play)
                     }
                 } catch (e: Exception) { }
             }
