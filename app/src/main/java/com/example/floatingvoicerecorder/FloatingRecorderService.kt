@@ -63,7 +63,6 @@ class FloatingRecorderService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        // نضمن أن الخدمة تعيد تشغيل نفسها ولا تتوقف بتسكير التطبيق
         return START_STICKY
     }
 
@@ -76,10 +75,13 @@ class FloatingRecorderService : Service() {
     }
 
     private fun acquireWakeLock() {
-        // حماية الخدمة من وضع النوم العميق للنظام عند إغلاق الشاشة
-        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
-        wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "FloatingRecorder::WakeLock")
-        wakeLock?.acquire(10 * 60 * 1000L /* 10 دقائق */)
+        try {
+            val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+            wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "FloatingRecorder::WakeLock")
+            wakeLock?.acquire(10 * 60 * 1000L /* 10 دقائق */)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     private fun startForegroundNotification() {
@@ -235,7 +237,6 @@ class FloatingRecorderService : Service() {
         btnDiscard.setOnClickListener { discardTempRecording(); resetUI() }
         btnClose.setOnClickListener { stopAudioRecording(); stopPreviewPlayback(); stopSelf() }
 
-        // تحسين سحب الفقاعة ليكون خفيفاً وسريع الاستجابة
         container.setOnTouchListener(object : View.OnTouchListener {
             private var initialX = 0
             private var initialY = 0
@@ -254,8 +255,6 @@ class FloatingRecorderService : Service() {
                     MotionEvent.ACTION_MOVE -> {
                         val deltaX = (event.rawX - initialTouchX).toInt()
                         val deltaY = (event.rawY - initialTouchY).toInt()
-                        
-                        // تحريك الشاشة بسلاسة مع تقليل التدفق
                         params.x = initialX + deltaX
                         params.y = initialY + deltaY
                         windowManager?.updateViewLayout(floatingView, params)
@@ -429,7 +428,11 @@ class FloatingRecorderService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         isRunning = false
-        if (wakeLock?.isHeld == true) wakeLock?.release()
+        try {
+            if (wakeLock?.isHeld == true) wakeLock?.release()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
         stopAudioRecording()
         stopPreviewPlayback()
         discardTempRecording()
